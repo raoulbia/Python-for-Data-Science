@@ -3,12 +3,13 @@ import quandl
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # get adjusted closing prices of 5 selected companies with Quandl
 quandl.ApiConfig.api_key = '6sHkfEoiqR4ykcsQkSnh'
 selected = ['CNP', 'F', 'WMT', 'GE', 'TSLA']
-selected = ['CNP', 'F']
-selected_ls = [['CNP', 'F'], ['WMT', 'GE']]
+selected = ['CNP', 'F', 'WMT']
+# selected = ['CNP', 'F']
 data = quandl.get_table('WIKI/PRICES', ticker = selected,
                         qopts = { 'columns': ['date', 'ticker', 'adj_close'] },
                         date = { 'gte': '2014-1-1', 'lte': '2016-12-31' }, paginate=True)
@@ -40,45 +41,51 @@ cov_annual = cov_daily * 250
 port_returns = []
 port_volatility = []
 stock_weights = []
+names = []
 
 # set the number of combinations for imaginary portfolios
-for selected in selected_ls:
-    num_assets = len(selected)
-    num_portfolios = 50000
 
-    # populate the empty lists with each portfolios returns,risk and weights
-    for single_portfolio in range(num_portfolios):
-        weights = np.random.random(num_assets)
-        weights /= np.sum(weights)
-        returns = np.dot(weights, returns_annual)
-        volatility = np.sqrt(np.dot(weights.T, np.dot(cov_annual, weights)))
-        port_returns.append(returns)
-        port_volatility.append(volatility)
-        stock_weights.append(weights)
+num_assets = len(selected)
+num_portfolios = 10000
 
-    # a dictionary for Returns and Risk values of each portfolio
-    portfolio = {'Returns': port_returns,
-                 'Volatility': port_volatility}
+# populate the empty lists with each portfolios returns,risk and weights
+for single_portfolio in range(num_portfolios):
+    weights = np.random.random(num_assets)
+    weights /= np.sum(weights)
+    returns = np.dot(weights, returns_annual)
+    volatility = np.sqrt(np.dot(weights.T, np.dot(cov_annual, weights)))
+    port_returns.append(returns)
+    port_volatility.append(volatility)
+    stock_weights.append(weights)
+    names.append(selected)
 
-    # extend original dictionary to accomodate each ticker and weight in the portfolio
-    for counter,symbol in enumerate(selected):
-        portfolio[symbol+' Weight'] = [Weight[counter] for Weight in stock_weights]
+# a dictionary for Returns and Risk values of each portfolio
+portfolio = {'Returns': port_returns,
+             'Volatility': port_volatility,
+             'Selected': names}
 
-    # make a nice dataframe of the extended dictionary
-    df = pd.DataFrame(portfolio)
+# extend original dictionary to accomodate each ticker and weight in the portfolio
+for counter,symbol in enumerate(selected):
+    portfolio[symbol+' Weight'] = [Weight[counter] for Weight in stock_weights]
 
-    # get better labels for desired arrangement of columns
-    column_order = ['Returns', 'Volatility'] + [stock+' Weight' for stock in selected]
+# make a nice dataframe of the extended dictionary
+df = pd.DataFrame(portfolio)
 
-    # reorder dataframe columns
-    df = df[column_order]
-    print(df.head())
-    break
+# get better labels for desired arrangement of columns
+column_order = ['Selected', 'Returns', 'Volatility'] + [stock+' Weight' for stock in selected]
 
-# plot the efficient frontier with a scatter plot
-plt.style.use('seaborn')
-df.plot.scatter(x='Volatility', y='Returns', figsize=(10, 8), grid=True)
-plt.xlabel('Volatility (Std. Deviation)')
-plt.ylabel('Expected Returns')
-plt.title('Efficient Frontier')
+# reorder dataframe columns
+df = df[column_order]
+
+print(df.head())
+print(df.tail())
+
+
+# # plot the efficient frontier with a scatter plot
+# plt.style.use('seaborn')
+# df.plot.scatter(x='Volatility', y='Returns', figsize=(10, 8), grid=True)
+# plt.xlabel('Volatility (Std. Deviation)')
+# plt.ylabel('Expected Returns')
+# plt.title('Efficient Frontier')
+plot = sns.scatterplot(x='Volatility', y='Returns', data=df)
 plt.show()
